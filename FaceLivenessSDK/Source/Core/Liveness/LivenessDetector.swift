@@ -9,7 +9,7 @@ import onnxruntime_objc
     private let TAG = "LivenessDetector"
     
     // Constants
-    private let MODEL_PATH = "Liveliness"
+    private let MODEL_NAME = "Liveliness"
     private let INPUT_SIZE = 224
     private let LIVE_THRESHOLD: Float = 0.5
     
@@ -17,7 +17,7 @@ import onnxruntime_objc
     private let mean: [Float] = [0.485, 0.456, 0.406]
     private let std: [Float] = [0.229, 0.224, 0.225]
     
-    private var session: ORTSession?
+    private var ortSession: ORTSession?
     private var ortEnv: ORTEnv?
     private var isModelLoaded = false
     
@@ -37,7 +37,7 @@ import onnxruntime_objc
             // Create environment
             ortEnv = try ORTEnv(loggingLevel: ORTLoggingLevel.warning)
             
-            guard let modelURL = try? ModelUtils.loadModelFromBundle(MODEL_PATH) else {
+            guard let modelURL = try? ModelUtils.loadModelFromBundle(MODEL_NAME) else {
                 LogUtils.e(TAG, "Failed to get model URL")
                 isModelLoaded = false
                 return
@@ -49,12 +49,12 @@ import onnxruntime_objc
             try sessionOptions.setGraphOptimizationLevel(ORTGraphOptimizationLevel.all)
             
             // Create session
-            session = try ORTSession(env: ortEnv!, modelPath: modelURL.path, sessionOptions: sessionOptions)
+            ortSession = try ORTSession(env: ortEnv!, modelPath: modelURL.path, sessionOptions: sessionOptions)
             isModelLoaded = true
-            LogUtils.d(TAG, "Liveness model loaded successfully")
+            LogUtils.d(TAG, "Model loaded successfully from: \(modelURL.path)")
         } catch {
             isModelLoaded = false
-            LogUtils.e(TAG, "Error loading liveness model: \(error.localizedDescription)", error)
+            LogUtils.e(TAG, "Error loading model: \(error.localizedDescription)", error)
         }
     }
     
@@ -75,7 +75,7 @@ import onnxruntime_objc
         }
         
         // If model failed to load, return a default result
-        guard isModelLoaded, let session = session, let env = ortEnv else {
+        guard isModelLoaded, let session = ortSession, let env = ortEnv else {
             LogUtils.e(TAG, "Model not loaded")
             throw LivenessException("Liveness model not loaded")
         }
@@ -183,7 +183,7 @@ import onnxruntime_objc
      * Close and release resources
      */
     @objc public func close() {
-        session = nil
+        ortSession = nil
         ortEnv = nil
         LogUtils.d(TAG, "LivenessDetector resources released")
     }
